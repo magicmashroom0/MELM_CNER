@@ -11,12 +11,10 @@ import argparse
 import os, sys
 from torch.utils.data import DataLoader, RandomSampler
 from tqdm import tqdm
-
 from transformers import XLMRobertaTokenizer, XLMRobertaForMaskedLM
 from data import Data
 
-label_map = {"PAD":0, "O": 1, "B-PER":2, "I-PER":3, "B-ORG":4, "I-ORG":5,
-             "B-LOC":6, "I-LOC":7, "B-MISC":8, "I-MISC":9}
+label_map = {"PAD":0, "O": 1,'B_disease':2, 'I_disease':3, 'B_crowd':4, 'I_crowd':5, 'B_body':6,'I_body':7, 'B_treatment':8, 'I_treatment':9, 'B_symptom':10,'I_symptom':11,'B_time':12,'I_time':13,'B_drug':14,'I_drug':15,'B_feature':16,'I_feature':17,'B_physiology':18,'I_physiology':19,'B_test':20,'I_test':21,'B_department':22,'I_department':23}
 
 def train(model, iterator, optimizer, clip, grad_acc):
 
@@ -66,8 +64,9 @@ def evaluate(model, iterator):
         total_count = 0
         entity_correct = 0
         entity_total = 0
-
+        flagg = 0
         for i, batch in enumerate(iterator):
+            flagg = i
             batch_start = time.time()
             batch = tuple(t.to(device) for t in batch)
             input_ids, input_mask, label_ids, masked_ids, entity_mask = batch
@@ -93,16 +92,16 @@ def evaluate(model, iterator):
             entity_match = (input_ids == pred) * entity_mask
             entity_correct += torch.sum(entity_match).item()
             entity_total += torch.sum(entity_mask).item()
-
-    return epoch_loss/(i+1), correct_count / total_count, entity_correct / entity_total
+    print(flagg+1)
+    return epoch_loss/(flagg+1), correct_count / total_count, entity_correct / entity_total
 
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--file_dir',  type=str, default="./data/")
-parser.add_argument('--ckpt_dir', type=str, default="./ckpt/ckpt.pt")
+parser.add_argument('--ckpt_dir', type=str, default="./")
 
 parser.add_argument('--seed', type=int, default=42)
-parser.add_argument('--bsize', type=int, default=16)
+parser.add_argument('--bsize', type=int, default=4)
 parser.add_argument('--n_epochs', type=int, default=20)
 parser.add_argument('--clip', type=float, default=1.0)
 parser.add_argument('--lr', type=float, default=1e-5)
@@ -114,6 +113,7 @@ args = parser.parse_args()
 if True:
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+#    device="cpu"
     print("Running on ", device)
 
     SEED = args.seed
@@ -121,7 +121,7 @@ if True:
     np.random.seed(SEED)
     torch.manual_seed(SEED)
     torch.cuda.manual_seed(SEED)
-    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.deterministic = True   # #
 
     FILE_DIR = args.file_dir
     CKPT_DIR = args.ckpt_dir
@@ -168,9 +168,10 @@ if True:
 
     print("Loading file from: ", FILE_DIR)
     train_dataset, valid_dataset = tuple(Data(tokenizer, BSIZE, label_map, FILE_DIR, MASK_RATE).datasets)
-
+    #print()
     train_dataloader = DataLoader(train_dataset, batch_size=BSIZE, sampler=RandomSampler(train_dataset))
     valid_dataloader = DataLoader(valid_dataset, batch_size=BSIZE)
+
     #test_dataloader = DataLoader(test_dataset, batch_size=BSIZE)
 
     optimizer = optim.Adam(model.parameters(), lr=LR)

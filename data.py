@@ -24,31 +24,33 @@ class InputFeatures(object):
         self.entity_mask = entity_mask
 
 class MultiLabelTextProcessor():
-
+    '''多标签文本处理'''
     def __init__(self, data_dir):
         self.data_dir = data_dir
         self.labels = None
 
     def _create_examples(self, df):
-        """Creates examples for the training and dev sets."""
+        """Creates examples for the training and dev sets. 为训练和开发集创建示例"""
         examples = []
         text = []
         label = []
         guid = 0
 
         for i,row in enumerate(df.values):
-            #print(df.values)
-            if not pd.isna(row[-1]):
-                # Add leading label special token
+            '''enumerate() 函数用于可遍历的数据对象'''
+            if not pd.isna(row[-1]):#pandas.isna 检测缺失值
+                # Add leading label special token 添加前导标签特殊标记
                 if row[-1] != 'O':
-                    if row[1] in ['En', 'De', 'Es', 'Nl']: # Add language prefix if they are present
+                    if row[1] in ['En', 'De', 'Es', 'Nl']:
+                        # Add language prefix if they are present 如果存在语言前缀，则添加语言前缀
                         text.append('<' + row[1] + '>')
                         label.append('O')
                     text.append('<' + row[-1] + '>')
-                    label.append('O') # Use O as pseudo label for entity special token
+                    label.append('O')
+                    # Use O as pseudo label for entity special token 使用 O 作为实体特殊标记的伪标签
                 text.append(row[0])
                 label.append(row[-1])
-                # Add trailing label special token
+                # Add trailing label special token 添加的标签特殊令牌
                 if row[-1] != 'O':
                     text.append('<' + row[-1] + '>')
                     label.append('O')
@@ -58,7 +60,6 @@ class MultiLabelTextProcessor():
                 guid += 1
                 text = []
                 label = []
-            #print(text)
         return examples
 
     def get_examples(self, dsplit):
@@ -73,7 +74,7 @@ class MultiLabelTextProcessor():
 class Data():
     def __init__(self, tokenizer, b_size, label_map, file_dir, mask_rate):
 
-        self.tokenizer = tokenizer
+        self.tokenizer = tokenizer #分词器
         self.b_size = b_size
         self.label_map = label_map
         self.mask_rate = mask_rate
@@ -100,7 +101,7 @@ class Data():
         return datasets
 
     def convert_examples_to_features(self, examples, tokenizer, max_seq_length=128, is_train=True):
-        """Loads a data file into a list of `InputBatch`s."""
+        """5"""
 
         features = []
 
@@ -132,12 +133,12 @@ class Data():
                 label_ids.extend([0] * (subword_len[i]-1))
 
                 # Mask named entities in sentence, and generate entity mask
-                print(label)
                 if label != "O":
                     same_class_labels = ['B-'+label[2:], 'I-'+label[2:]]
-                    print(same_class_labels)
-                    diff_class_labels = [l for l in ['O', 'B-PER', 'I-PER', 'B-LOC', 'I-LOC', 'B-ORG', 'I-ORG', 'B-MISC', 'I-MISC'] if l not in same_class_labels]
-                    assert len(diff_class_labels) == 7
+                    diff_class_labels = [l for l in
+                                         ['O', 'B_disease', 'I_disease', 'B_crowd', 'I_crowd', 'B_body','I_body', 'B_treatment', 'I_treatment', 'B_symptom','I_symptom','B_time','I_time','B_drug','I_drug','B_feature','I_feature','B_physiology','I_physiology','B_test','I_test','B_department','I_department']
+                                         if l not in same_class_labels]
+                    assert len(diff_class_labels) == 23
 
                     for count in range(subword_len[i]):
                         if subword_start[i]+count >= max_seq_length:
@@ -188,7 +189,7 @@ class Data():
 
     def label_to_token_id(self,label):
         label = '<' + label + '>'
-        assert label in ['<O>', '<B-PER>', '<I-PER>', '<B-ORG>', '<I-ORG>', '<B-LOC>', '<I-LOC>', '<B-MISC>', '<I-MISC>']
+        assert label in ['O', 'B_disease', 'I_disease', 'B_crowd', 'I_crowd', 'B_body','I_body', 'B_treatment', 'I_treatment', 'B_symptom','I_symptom','B_time','I_time','B_drug','I_drug','B_feature','I_feature','B_physiology','I_physiology','B_test','I_test','B_department','I_department']
 
         return self.tokenizer.convert_tokens_to_ids(label)
 

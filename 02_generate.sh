@@ -6,7 +6,7 @@ IN_DIR="./data/"
 
 python generate.py \
   --seed=42 \
-  --bsize=16 \
+  --bsize=4 \
   --mu_ratio=0.5 \
   --sigma=1 \
   --o_mask_rate=0 \
